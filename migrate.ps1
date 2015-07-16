@@ -90,8 +90,8 @@ $MigrationScripts | Where-Object {$_ -ne $null} | ForEach-Object -Process {
     $file = Get-Content -Path $_;
     $filename= Split-Path $_ -Leaf 
     $fileVersion= $filename.Substring(0, $filename.IndexOf("_"))
-    $begin      = $file.IndexOf($beginToken)+1;
-    $end        = $file.IndexOf($endToken)-1;
+    $begin      = [array]::IndexOf($file, $beginToken)+1;
+    $end        = [array]::IndexOf($file, $endToken)  -1;
     $cmd   = $file[$begin..$end] | Out-String
     $Go = "`r`nGO`r`n"
     "BEGIN TRANSACTION" | Out-File -FilePath migration.sql -Append
