@@ -108,5 +108,5 @@ $MigrationScripts | Where-Object {$_ -ne $null} | ForEach-Object -Process {
 # Execute the migration script.
 "Executing Migration Scripts"
 "==========================="
-#SQLCMD.EXE -S $Server -d $Database -E -i migration.sql -b
+SQLCMD.EXE -S $Server -d $Database -E -i migration.sql -b
 ""
