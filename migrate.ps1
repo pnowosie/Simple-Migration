@@ -21,8 +21,6 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-if (-not (Test-Path "config\$Environment.sql")) { throw "Could not find configuration file for environment: $Environment"; }
-
 "" # Write line.
 
 # Ensure the Version table exists and has a record.
@@ -33,7 +31,7 @@ SQLCMD.EXE -S $Server -d $Database -E -i ensure-version-table.sql -b
 $CurrentVersion = SQLCMD.EXE -S $Server -d $Database -E -i  print-current-version.sql -b
 
 # Find all migrations. Each subdirectory is a migration.
-$MigrationFiles = Get-ChildItem sql
+$MigrationFiles = Get-ChildItem 'sql\*.sql'
 
 if (!$MigrationFiles) { "No migrations to run."; ""; exit }
 
@@ -84,8 +82,12 @@ $MigrationScripts | ForEach-Object { Split-Path $_ -Leaf }
 $beginToken = if ($goUp) {"BEGIN_SETUP:"} else {"BEGIN_TEARDOWN:"}
 $endToken   = if ($goUp) {"END_SETUP:"  } else {"END_TEARDOWN:"  }
 
-
-(Get-Content "config\$Environment.sql") + "`r`n`r`n" | Out-File -FilePath migration.sql
+if (-not (Test-Path "config\$Environment.sql")) { 
+    $EnvVariables = "--  No environment variables for $Environment environment. You can add config/$Environment.sql file when needed. --" 
+} else {
+    $EnvVariables = Get-Content "config\$Environment.sql"
+}
+$EnvVariables + "`r`n`r`n" | Out-File -FilePath migration.sql
 $MigrationScripts | Where-Object {$_ -ne $null} | ForEach-Object -Process {
     $file = Get-Content -Path $_;
     $filename= Split-Path $_ -Leaf 
