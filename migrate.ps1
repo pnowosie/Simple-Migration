@@ -180,8 +180,6 @@ if(-not($goUp -or $goDown)) {
 $pendingVersions = Get-PendingVersions -currentVersion $currentVersion -targetVersion $Target -versions $allVersions
 
 $pendingMigrations = $pendingVersions | Get-Migration
-
-
 $MigrationScripts = $pendingMigrations | Wrap-Migration -goUp $goUp
 
 $EnvVariables = if (-not (Test-Path "config\$Environment.sql")) { 
@@ -191,8 +189,11 @@ $EnvVariables = if (-not (Test-Path "config\$Environment.sql")) {
 }
 
 $EnvVariables + "`r`n`r`n" | Out-File -FilePath migration.sql
-
 $MigrationScripts | ForEach-Object -Process { $_ | Out-File -FilePath migration.sql -Append }
 
+# Display migration script names to be migrated 
+$pendingVersions | %{ ls sql\$_*.sql } | select @{ Name='Migrations to run'; Expression={$_.Name} }
 
+"`r`n`r`nExecuting Migration Scripts"
+"---------------------------"
 SQLCMD.EXE -S $Server -d $Database -E -i migration.sql -b
