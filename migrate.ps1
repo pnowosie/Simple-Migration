@@ -1,15 +1,57 @@
-﻿param(
-    [string]$Server         = "localhost", #= $(throw "Server required."),
-    [string]$Database       = $(throw "Database required."),
+﻿<#
+.SYNOPSIS
+Simple-Migration: dead simple M$SQL migrations
+
+.DESCRIPTION
+Powershell solution for Microsoft SQL Server database migration and versioning, based on Adam Boddington's idea.
+It is open-sourced, MIT-licenced, easy customise, fully extendable and happy usable.
+
+.PARAMETER Server (default 'localhost')
+Database server name, the same you normally pass to -S parameter in SQLCMD command.
+.PARAMETER Database
+Database name. Database should exists on server, you should have sufficient permissions to it.
+.PARAMETER Environment
+Name of the sql file in config directory, containing SQLCMD's scripting variables.
+.PARAMETER Target (default the latest)
+Timestamp (first 14 characters) of migration script you want to migrate. Simply omit this parameter to migrate to the latest version
+
+.EXAMPLE
+migrate.ps1 -Database blog
+Running latest, not-installed migrations scripts against 'blog' database on local SQL server.
+
+.NOTES
+Licensed under the MIT License.
+GitHub repository page:              https://github.com/pnowosie/Simple-Migration
+Adam Boddington's article:           http://lmgtfy.com/?q=Stacking+Code+database+migrations+with+powershell
+#>
+param(
+    [string]$Server         = "localhost",
+    [Parameter(Mandatory=$true, HelpMessage='Name of existing database')]
+    [string]$Database,
     [string]$Environment    = "DEV",
     [string]$Target
 )
+
+function Get-ScriptDirectory
+{
+  $Invocation = (Get-Variable MyInvocation -Scope 1).Value
+  Split-Path $Invocation.MyCommand.Path
+}
+$ToolDir = Get-ScriptDirectory
+
+function Ensure-VersionTable(
+    [string]$Server         = $(throw "Server required."),
+    [string]$Database       = $(throw "Database required."))
+{
+    # Ensure the Version table exists and has a record.
+    SQLCMD.EXE -S $Server -d $Database -E -i "$ToolDir\ensure-version-table.sql" -b
+}
 
 function Get-CurrentVersion(
     [string]$Server         = $(throw "Server required."),
     [string]$Database       = $(throw "Database required."))
 {
-    SQLCMD.EXE -S $Server -d $Database -E -i  print-current-version.sql -b
+    SQLCMD.EXE -S $Server -d $Database -E -i  "$ToolDir\print-current-version.sql" -b
 }
 
 function Get-AllVersions
@@ -117,11 +159,13 @@ function Wrap-Migration([bool]$goUp) {
     }
 }
 
+
 $allVersions = Get-AllVersions
 
 if ($Target -eq "")    { $Target = $allVersions | Select-Object -Last 1 }
 #add validation
 
+Ensure-VersionTable  -S $Server -d $Database
 $currentVersion = Get-CurrentVersion -Server $Server -Database $Database
 
 $goUp = $Target -gt $currentVersion
