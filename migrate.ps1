@@ -145,7 +145,7 @@ function Wrap-Migration([bool]$goUp) {
     }
     process {
         $fileVersion = $_.Version
-        $cmd = "BEGIN TRANSACTION`r`n"
+        $cmd = "BEGIN TRANSACTION`r`n" + $Go
         $cmd += if($goUp) {$_.Migration.Up | Out-String} else {$_.Migration.Down | Out-String}
         $cmd += $Go
         $cmd += if ($goUp) {
